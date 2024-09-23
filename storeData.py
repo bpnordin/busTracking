@@ -1,9 +1,10 @@
 import sqlite3
 from datetime import datetime
 import get
+import time
 
 
-def sqlTableCreation(conn):
+def tableCreation(conn):
     cursor = conn.cursor()
 
     cursor.execute('''
@@ -52,10 +53,14 @@ def inputData(conn,data):
 
 if __name__ == '__main__':
     conn = sqlite3.connect('busData.db')
-    sqlTableCreation(conn)
-    data = get.getVehicle("1")
-    inputData(conn,data)
-    conn.close()
-
-    print("Vehicle and location data have been processed successfully.")
-
+    tableCreation(conn)
+    try:
+        while True:
+            data = get.getVehicle("1")
+            inputData(conn,data)
+            time.sleep(6)
+    except KeyboardInterrupt:
+            print("\nProgram interrupted! Exiting...")
+    finally:
+        conn.close()
+        print("Database connection closed.")
