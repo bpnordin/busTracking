@@ -41,7 +41,7 @@ def inputData(conn,data):
         if not vehicle_exists(vehicle['vehicleId']):
             cursor.execute('''
                 INSERT INTO vehicles (vehicle_id, route_num, route_name, destination, schedule_status)
-                VALUES (?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?)
             ''', (vehicle['vehicleId'], vehicle['routeNum'], vehicle['routeName'], vehicle['destination'], vehicle['scheduleStatus'], ))
         
         cursor.execute('''
