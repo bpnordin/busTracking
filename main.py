@@ -1,6 +1,5 @@
 import requests
 import time
-import math
 from geopy import distance
 
 
