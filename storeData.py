@@ -13,7 +13,7 @@ def tableCreation(conn):
         route_num TEXT,
         route_name TEXT,
         destination TEXT,
-        schedule_status INTEGER,
+        schedule_status INTEGER
     )
     ''')
 
