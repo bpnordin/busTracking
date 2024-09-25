@@ -15,7 +15,12 @@ def getVehicle(route):
     vehicleLocURL = "https://webapi.rideuta.com/api/VehicleLocation/" + route
 
     r = requests.get(vehicleLocURL)
-    vehicleList = r.json()
+    try:
+        vehicleList = r.json()
+    except requests.exceptions.JSONDecodeError:
+        print(r.text)
+        raise Exception("could not decode json, printed text and not throwing error")
+
 
     #print(vehicleList[0].keys()) #location{latitude, longitude}
     return vehicleList
