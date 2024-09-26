@@ -1,4 +1,5 @@
 import requests
+import time
 
 def getStops(route):
 
@@ -17,6 +18,10 @@ def getVehicle(route):
     r = requests.get(vehicleLocURL)
     try:
         vehicleList = r.json()
+    except requests.exceptions.ConnectionError:
+        time.sleep(60)
+        return getVehicle(route)
+
     except requests.exceptions.JSONDecodeError:
         print(r.text)
         raise Exception("could not decode json, printed text and not throwing error")
