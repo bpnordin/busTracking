@@ -19,7 +19,6 @@ def get_data(vehicle_id, conn):
     conn = sqlite3.connect(database)
     cursor = conn.cursor()
 
-    vehicle_id = '24005'
     cursor.execute('select latitude, longitude, timestamp from locations where vehicle_id is ?',(vehicle_id,))
 
     locationList = cursor.fetchall()
@@ -33,47 +32,22 @@ def get_data(vehicle_id, conn):
 
     return df
 
+def fixDeriv(value):
+    if value == 0:
+        return 0
+    elif value < 0:
+        return -1
+    else:
+        return 1
 
-def filter_data(df, distance_threshold = 1, minutes_threshold = "10 minutes"):
+def filter_data(df, distance_threshold = .5):
     """
     filter to just the points around when the distance is small
-    but I don't care about distsance, I care about time I just realized
-    distance ~ 0 +- some amount of minutes
     """
-    start_time = '2024-09-27 06:00:00'
-    end_time = '2024-09-27 08:00:00'
-
-    mask_time = (df['timestamp'] > start_time) & (df['timestamp'] < end_time)
     mask_distance = df['distance'] < distance_threshold
-    #get points around this +- minutes_threshold
-    #but this isn't a gurantee, it also needs to be within a certain distance
-    mask_velocity = (df['derivative'] > 0) & (df['derivative'].shift(1) < 0)
-    df_poi = df[mask_velocity & mask_distance]['timestamp']
-    print(df[mask_velocity & mask_distance])
+    changePoints = np.where((mask_distance - mask_distance.shift()).fillna(0) != 0)[0]
+    return changePoints
 
-
-    for poi in df_poi:
-        print(poi)
-        window_start = poi - pd.to_timedelta(minutes_threshold)
-        window_end = poi + pd.to_timedelta(minutes_threshold)
-#        mask_time = (df['timestamp'] > window_start) & (df['timestamp'] < window_end)
-        break
-
-
-
-
-    mask = mask_time
-#    mask = mask_distance
-    df_predict = df.loc[mask]
-    df_predict = df_predict.drop_duplicates(subset=['distance'])
-    #normalize for fitting
-    #TODO I should change this over to a pipeline so undoing the normalization is easy
-#    df_predict['timeSeconds'] = (df_predict['timeSeconds'] - df_predict['timeSeconds'].min()) / (df_predict['timeSeconds'].max() - df_predict['timeSeconds'].min())
-#    df_predict['distance'] = (df_predict['distance'] - df_predict['distance'].min()) / (df_predict['distance'].max() - df_predict['distance'].min())
-#    df_predict['derivative'] = (df_predict['derivative'] - df_predict['derivative'].min()) / (df_predict['derivative'].max() - df_predict['derivative'].min())
-
-
-    return df_predict
 
 def fit_func(x, a, b,c,d,e):
     return a*pow(x,2) + b*x + c + d*pow(x,3)+e*x**4
@@ -102,34 +76,33 @@ if __name__ == '__main__':
     database = "newBusTracking.db"
     conn = sqlite3.connect(database)
     cursor = conn.cursor()
-    vehicle_id = '24005'
+    vehicle_id = '13005'
     df = get_data(vehicle_id, conn)
-#    df = filter_data(df)
-    """
-    min = df['distance'].min()
-    res = minimize(loss_function, [1,1,1,1,1],args=(df['timeSeconds'],df['distance']))
-
-    a_opt,b_opt,c_opt,d_opt,e_opt = res.x
+    changePoints = filter_data(df)
 
 
-    popt, pcov = curve_fit(fit_func, df['timeSeconds'], df['distance'])
+    for i in range(0, len(changePoints), 2):
+        start_index = changePoints[i]
+        end_index = changePoints[i + 1]
+        df_plot = df.iloc[start_index:end_index]
+#        df_plot = df_plot.drop_duplicates(subset='distance')
 
+        min = df_plot['distance'].min()
+        df_plot['timeSeconds'] = (df_plot['timestamp'] - pd.Timestamp("1970-01-01")) // pd.Timedelta("1s")
+        df_plot['timeSeconds'] = (df_plot['timeSeconds'] - df_plot['timeSeconds'].min()) / (df_plot['timeSeconds'].max() - df_plot['timeSeconds'].min())
 
-    a_fit, b_fit,c_fit, d_fit,e_fit= popt
-    y_fit = fit_func(df['timeSeconds'], a_fit, b_fit,c_fit,d_fit,e_fit)
-    y_opt = fit_func(df['timeSeconds'], a_opt, b_opt, c_opt, d_opt,e_opt)
-    """
-    df['derivative'].apply(lambda d: 1 if d > 0 else -1 if d < 0 else 0)
+        res = minimize(loss_function, [1,1,1,1,1],args=(df_plot['timeSeconds'],df_plot['distance']))
+        a_opt,b_opt,c_opt,d_opt,e_opt = res.x
+        y_opt = fit_func(df_plot['timeSeconds'], a_opt, b_opt, c_opt, d_opt,e_opt)
 
-    plt.figure(figsize=(30, 10))
+        plt.figure(figsize=(30, 10))
 #    plt.ylim(-.03, .03)
-    plt.scatter(df['timestamp'], df['distance'], label='Data')
-    plt.scatter(df['timestamp'], df['derivative'], label='Data')
-#    plt.plot(df['timeSeconds'], y_fit, label='Fit', color='red')
-#    plt.plot(df['timeSeconds'], y_opt, label='Opt', color='green')
-    plt.xlabel('normalized_time')
-    plt.ylabel('distance')
-    plt.legend()
-    plt.savefig("temp.png")
-    os.system('kitty icat temp.png')
-    plt.close()
+        plt.scatter(df_plot['timestamp'], df_plot['distance'], label='Data')
+#        plt.plot(df_plot['timestamp'], y_fit, label='Fit', color='red')
+        plt.plot(df_plot['timestamp'], y_opt, label='Opt', color='green')
+        plt.xlabel('normalized_time')
+        plt.ylabel('distance')
+        plt.legend()
+        plt.savefig("temp.png")
+        os.system('kitty icat temp.png')
+        plt.close()
