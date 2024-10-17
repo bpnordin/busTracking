@@ -1,66 +1,17 @@
-import sqlite3
-from datetime import datetime
 import get
 import time
+from database import BusData
 
-
-def tableCreation(conn):
-    cursor = conn.cursor()
-
-    cursor.execute('''
-    CREATE TABLE IF NOT EXISTS vehicles (
-        vehicle_id TEXT PRIMARY KEY,
-        route_num TEXT,
-        route_name TEXT,
-        schedule_status INTEGER
-    )
-    ''')
-
-    cursor.execute('''
-    CREATE TABLE IF NOT EXISTS locations (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        vehicle_id TEXT,
-        latitude REAL,
-        longitude REAL,
-        timestamp TEXT,
-        destination TEXT,
-        FOREIGN KEY (vehicle_id) REFERENCES vehicles(vehicle_id)
-    )
-    ''')
-    conn.commit()
-
-def inputData(conn,data):
-
-    cursor = conn.cursor()
-
-    def vehicle_exists(vehicle_id,route_num):
-        cursor.execute('SELECT 1 FROM vehicles WHERE vehicle_id = ? AND route_num = ?', (vehicle_id,route_num))
-        return cursor.fetchone() is not None
-
-    for vehicle in data:
-        if not vehicle_exists(vehicle['vehicleId'],vehicle['routeNum']):
-            cursor.execute('''
-                INSERT INTO vehicles (vehicle_id, route_num, route_name, schedule_status)
-                VALUES (?, ?, ?, ?)
-            ''', (vehicle['vehicleId'], vehicle['routeNum'], vehicle['routeName'], vehicle['scheduleStatus'], ))
-        
-        cursor.execute('''
-            INSERT INTO locations (vehicle_id, latitude, longitude, timestamp, destination)
-            VALUES (?, ?, ?, ?, ?)
-        ''', (vehicle['vehicleId'], vehicle['location']['latitude'], vehicle['location']['longitude'], datetime.now().isoformat(),vehicle['destination']))
-
-    conn.commit()
-
-if __name__ == '__main__':
-    conn = sqlite3.connect('busData.db')
-    tableCreation(conn)
+if __name__ == "__main__":
+    dbFile = "busData.db"
+    db = BusData(dbFile)
+    db.tableCreation()
     try:
         while True:
             data = get.getVehicle("1")
-            inputData(conn,data)
+            db.inputData(data)
             time.sleep(6)
     except KeyboardInterrupt:
-            print("\nProgram interrupted! Exiting...")
+        print("\nProgram interrupted! Exiting...")
     finally:
-        conn.close()
         print("Database connection closed.")
