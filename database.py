@@ -134,6 +134,7 @@ class BusData:
             ).miles,
             axis=1,
         )
+        df_copy['timestamp'] = pd.to_datetime(df_copy['timestamp'])
         return df_copy
 
     def getChangePoints(self,df, distance_threshold=0.5):
@@ -142,6 +143,12 @@ class BusData:
         """
         mask_distance = df["distance"] < distance_threshold
         changePoints = np.where((mask_distance - mask_distance.shift()).infer_objects().fillna(0) != 0)[0]
+        print(changePoints)
+        print(len(changePoints))
+        print(mask_distance[0])
+        if mask_distance[0] == True:
+            #subtracting to find out where it goes True-False does not take into account that it can start true -> false
+            changePoints = np.insert(changePoints,0,0)
         return changePoints
 
     def filterDataForDistance(self,df,distance_threshold=0.5):
@@ -154,7 +161,7 @@ class BusData:
         for i in range(0, len(changePoints), 2):
             start_index = changePoints[i]
             end_index = changePoints[i + 1]
-            listOfDF.append(df.iloc[start_index:end_index])
+            listOfDF.append(df.iloc[start_index:end_index-1])
 
         return listOfDF
 
