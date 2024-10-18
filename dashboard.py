@@ -1,7 +1,9 @@
 from bokeh.plotting import figure, show
 from database import BusData
-from bokeh.models import ColumnDataSource, RangeTool
+from bokeh.models import ColumnDataSource, RangeTool, Select
 from bokeh.layouts import column
+from bokeh.io import curdoc
+
 
 
 """
@@ -11,59 +13,30 @@ from bokeh.layouts import column
 3. filter out for bus stop distance
     (need to also implement getting bus stop coords)
 4. 
+
+instead of calculating distance, just use lat lon in x y and calc the distance of that
 """
 
-dbFile = "busData.db"
+dbFile = "newBusTracking.db"
 db = BusData(dbFile)
+routeNum = "1"
 
-vehicle_df = db.getVehiclesFromRoute("1")
-#list of lists of dataframes
-vehicleInfoDict = {}
+df = db.getRouteLocationData(routeNum)
+df = db.calculateDistance(df)
+selectVehicles = df['vehicle_id'].unique().tolist()
+select_widget = Select(title="Select a vehicle id",options=selectVehicles)
 
-for vehicle_id in vehicle_df['vehicle_id']:
-    print(vehicle_id)
-    location_df = db.getVehicleLocationData(vehicle_id)
-    location_df = db.calculateDistance(location_df)
-    df = db.filterDataForDistance(location_df)
-    vehicleInfoDict[vehicle_id] = df
-    break
+def update_id(attr,old,new):
+    source.data = df.loc[df['vehicle_id'] == select_widget.value].sort_values('timestamp').to_dict()
 
-uniqueDirections = {}
-cds = ColumnDataSource(data={})
-l = []
-d = []
-for vID,listDF in vehicleInfoDict.items():
-    uniqueDirections[vID] = []
-    for df in listDF:
-        uniqueDirections[vID].extend(df['destination'].unique())
-        cds = ColumnDataSource(data=df)
-    l = listDF
 
-    print(list(set(uniqueDirections[vID])))
-    d = list(set(uniqueDirections[vID]))
+df_vehicle = df.loc[df['vehicle_id'] == "13004"].sort_values('timestamp')
+source = ColumnDataSource(df_vehicle)
+select_widget.on_change('value', update_id)
 
-directionLabel = [f"Direction {i}" for i in d]
-print(directionLabel)
-labels = [f"DataFrame {i}: {df.timestamp.dt.time.min()} - {df.timestamp.dt.time.max()}" for i, df in enumerate(l)]
-print(labels)
-# create a new plot with a title and axis labels
-p = figure(title="Bus distance at time", x_axis_label="time stamp", y_axis_label="distance",x_axis_type="datetime")
 
-# add a line renderer with legend and line thickness
-p.scatter('timestamp', 'distance',source=cds)
-select = figure(title="Drag the middle and edges of the selection box to change the range above",
-                height=130, width=800, y_range=p.y_range,
-                x_axis_type="datetime", y_axis_type=None,
-                tools="", toolbar_location=None, background_fill_color="#efefef")
-
-range_tool = RangeTool(x_range=p.x_range, start_gesture="pan")
-range_tool.overlay.fill_color = "navy"
-range_tool.overlay.fill_alpha = 0.2
-
-select.line('timestamp', 'distance', source=cds)
-select.ygrid.grid_line_color = None
-select.add_tools(range_tool)
-
-show(column(p, select))
-
-# show the results
+p = figure()
+p.line("longitude","latitude",source=source)
+layout = column(p, select_widget)
+curdoc().add(p)
+curdoc().add(select_widget)

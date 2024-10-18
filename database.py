@@ -119,10 +119,41 @@ class BusData:
 
         locationList = self.cursor.fetchall()
         df = pd.DataFrame(locationList, columns=["latitude", "longitude", "timestamp","destination"])
-
+        df['timestamp'] = pd.to_datetime(df['timestamp'])
         return df
 
-    def calculateDistance(self, df, stop_coords=("40.769267", "-111.882791")):
+
+    def getRouteLocationData(self,routeNum):
+        self.cursor.execute(
+            "SELECT latitude, longitude, timestamp,destination,vehicles.vehicle_id FROM locations INNER JOIN vehicles ON locations.vehicle_id = vehicles.vehicle_id WHERE vehicles.route_num = ?",
+            (routeNum,),
+        )
+
+        locationList = self.cursor.fetchall()
+        df = pd.DataFrame(locationList, columns=["latitude", "longitude", "timestamp","destination","vehicle_id"])
+        df['timestamp'] = pd.to_datetime(df['timestamp'])
+        return df
+
+    def calculateDistance(self,df,stop_coords=("40.769267", "-111.882791")):
+        """
+        calculate distaance between two lat, long just like it is a point in 2d space
+        return RMS
+        """
+        def calc(row):
+            x,y = stop_coords
+            x = float(x)
+            y = float(y)
+            a = abs(x-row['latitude'])**2
+            b = abs(y-row['longitude'])**2
+            return a+b
+        df_copy = df.copy()
+        df_copy["distance"] = df_copy.apply(
+            calc,
+            axis=1,
+        )
+        return df_copy
+
+    def calculateGeoDistance(self, df, stop_coords=("40.769267", "-111.882791")):
         """
         using the location data in a pandas data frame df, calc the distance using geopy to a point
         add that as a column and return the modified database
@@ -134,7 +165,6 @@ class BusData:
             ).miles,
             axis=1,
         )
-        df_copy['timestamp'] = pd.to_datetime(df_copy['timestamp'])
         return df_copy
 
     def getChangePoints(self,df, distance_threshold=0.5):
