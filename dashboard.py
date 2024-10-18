@@ -1,5 +1,7 @@
 from bokeh.plotting import figure, show
 from database import BusData
+from bokeh.models import ColumnDataSource, RangeTool
+from bokeh.layouts import column
 
 
 """
@@ -11,27 +13,38 @@ from database import BusData
 4. 
 """
 
-dbFile = "newBusTracking.db"
+dbFile = "busData.db"
 db = BusData(dbFile)
 
-vehicle_id = "13005"
 vehicle_df = db.getVehiclesFromRoute("1")
+#list of lists of dataframes
+vehicleInfoDict = {}
 
 for vehicle_id in vehicle_df['vehicle_id']:
+    print(vehicle_id)
     location_df = db.getVehicleLocationData(vehicle_id)
     location_df = db.calculateDistance(location_df)
-    changePoints = db.filterDataForDistance(location_df)
-    print(changePoints)
+    df = db.filterDataForDistance(location_df)
+    vehicleInfoDict[vehicle_id] = df
+    break
 
-# prepare some data
-x = [1, 2, 3, 4, 5]
-y = [6, 7, 2, 4, 5]
+uniqueDirections = {}
+cds = ColumnDataSource(data={})
+for vID,listDF in vehicleInfoDict.items():
+    uniqueDirections[vID] = []
+    for df in listDF:
+        uniqueDirections[vID].extend(df['destination'].unique())
+        cds = ColumnDataSource(data=df)
 
+    print(set(uniqueDirections[vID]))
+
+
+print(cds.data)
 # create a new plot with a title and axis labels
-p = figure(title="Simple line example", x_axis_label="x", y_axis_label="y")
+p = figure(title="Bus distance at time", x_axis_label="time stamp", y_axis_label="distance",x_axis_type="datetime")
 
 # add a line renderer with legend and line thickness
-p.line(x, y, legend_label="Temp.", line_width=2)
+p.line('timestamp', 'distance',source=cds)
 
 # show the results
 show(p)
