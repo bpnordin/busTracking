@@ -3,6 +3,7 @@ from geopy import distance
 import pandas as pd
 from datetime import datetime
 import numpy as np
+import math
 
 
 class BusData:
@@ -143,9 +144,9 @@ class BusData:
             x,y = stop_coords
             x = float(x)
             y = float(y)
-            a = abs(x-row['latitude'])**2
-            b = abs(y-row['longitude'])**2
-            return a+b
+            p1 = [x,y]
+            p2 = [row['latitude'],row['longitude']]
+            return math.dist(p1,p2)
         df_copy = df.copy()
         df_copy["distance"] = df_copy.apply(
             calc,

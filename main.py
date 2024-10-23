@@ -44,7 +44,7 @@ selectDirectionWidget.on_change('value',update_destination)
 stop_coords = (40.769267, -111.882791)
 x,y = stop_coords
 
-stopData = ColumnDataSource({"x":[y],"y":[x],"sizes":[.005]})
+stopData = ColumnDataSource({"x":[y],"y":[x],"sizes":[.008]})
 glyph = Circle(x="x", y="y", radius="sizes", line_color="red", line_width=3,fill_alpha=0)
 
 p = figure()
