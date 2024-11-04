@@ -78,7 +78,6 @@ def loss_function(params, t, y, penalty_weight=100):
 
 
 if __name__ == "__main__":
-
     database = "newBusTracking.db"
     conn = sqlite3.connect(database)
     cursor = conn.cursor()

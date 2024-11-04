@@ -5,7 +5,6 @@ from bokeh.layouts import column
 from bokeh.io import curdoc
 
 
-
 """
 
 1. get list of vehicles
@@ -23,20 +22,25 @@ routeNum = "1"
 
 df = db.getRouteLocationData(routeNum)
 df = db.calculateDistance(df)
-selectVehicles = df['vehicle_id'].unique().tolist()
-select_widget = Select(title="Select a vehicle id",options=selectVehicles)
-
-def update_id(attr,old,new):
-    source.data = df.loc[df['vehicle_id'] == select_widget.value].sort_values('timestamp').to_dict()
+selectVehicles = df["vehicle_id"].unique().tolist()
+select_widget = Select(title="Select a vehicle id", options=selectVehicles)
 
 
-df_vehicle = df.loc[df['vehicle_id'] == "13004"].sort_values('timestamp')
+def update_id(attr, old, new):
+    source.data = (
+        df.loc[df["vehicle_id"] == select_widget.value]
+        .sort_values("timestamp")
+        .to_dict()
+    )
+
+
+df_vehicle = df.loc[df["vehicle_id"] == "13004"].sort_values("timestamp")
 source = ColumnDataSource(df_vehicle)
-select_widget.on_change('value', update_id)
+select_widget.on_change("value", update_id)
 
 
 p = figure()
-p.line("longitude","latitude",source=source)
+p.line("longitude", "latitude", source=source)
 layout = column(p, select_widget)
 curdoc().add(p)
 curdoc().add(select_widget)

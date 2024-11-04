@@ -3,7 +3,6 @@ import time
 
 
 def getStops(route):
-
     stopsURL = "https://webapi.rideuta.com/api/Stops/" + route
 
     r = requests.get(stopsURL)
@@ -14,7 +13,6 @@ def getStops(route):
 
 
 def getVehicle(route):
-
     vehicleLocURL = "https://webapi.rideuta.com/api/VehicleLocation/" + route
 
     r = requests.get(vehicleLocURL)

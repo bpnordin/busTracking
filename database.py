@@ -7,7 +7,6 @@ import math
 
 
 class BusData:
-
     def __init__(self, dbFileName):
         self.dbFileName = dbFileName
         self.connection = sqlite3.connect(self.dbFileName)
@@ -119,34 +118,40 @@ class BusData:
         )
 
         locationList = self.cursor.fetchall()
-        df = pd.DataFrame(locationList, columns=["latitude", "longitude", "timestamp","destination"])
-        df['timestamp'] = pd.to_datetime(df['timestamp'])
+        df = pd.DataFrame(
+            locationList, columns=["latitude", "longitude", "timestamp", "destination"]
+        )
+        df["timestamp"] = pd.to_datetime(df["timestamp"])
         return df
 
-
-    def getRouteLocationData(self,routeNum):
+    def getRouteLocationData(self, routeNum):
         self.cursor.execute(
             "SELECT latitude, longitude, timestamp,destination,vehicles.vehicle_id FROM locations INNER JOIN vehicles ON locations.vehicle_id = vehicles.vehicle_id WHERE vehicles.route_num = ?",
             (routeNum,),
         )
 
         locationList = self.cursor.fetchall()
-        df = pd.DataFrame(locationList, columns=["latitude", "longitude", "timestamp","destination","vehicle_id"])
-        df['timestamp'] = pd.to_datetime(df['timestamp'])
+        df = pd.DataFrame(
+            locationList,
+            columns=["latitude", "longitude", "timestamp", "destination", "vehicle_id"],
+        )
+        df["timestamp"] = pd.to_datetime(df["timestamp"])
         return df
 
-    def calculateDistance(self,df,stop_coords=("40.769267", "-111.882791")):
+    def calculateDistance(self, df, stop_coords=("40.769267", "-111.882791")):
         """
         calculate distaance between two lat, long just like it is a point in 2d space
         return RMS
         """
+
         def calc(row):
-            x,y = stop_coords
+            x, y = stop_coords
             x = float(x)
             y = float(y)
-            p1 = [x,y]
-            p2 = [row['latitude'],row['longitude']]
-            return math.dist(p1,p2)
+            p1 = [x, y]
+            p2 = [row["latitude"], row["longitude"]]
+            return math.dist(p1, p2)
+
         df_copy = df.copy()
         df_copy["distance"] = df_copy.apply(
             calc,
@@ -168,31 +173,32 @@ class BusData:
         )
         return df_copy
 
-    def getChangePoints(self,df, distance_threshold=0.5):
+    def getChangePoints(self, df, distance_threshold=0.5):
         """
         filter to just the points around when the distance is small
         """
         mask_distance = df["distance"] < distance_threshold
-        changePoints = np.where((mask_distance - mask_distance.shift()).infer_objects().fillna(0) != 0)[0]
+        changePoints = np.where(
+            (mask_distance - mask_distance.shift()).infer_objects().fillna(0) != 0
+        )[0]
         print(changePoints)
         print(len(changePoints))
         print(mask_distance[0])
         if mask_distance[0] == True:
-            #subtracting to find out where it goes True-False does not take into account that it can start true -> false
-            changePoints = np.insert(changePoints,0,0)
+            # subtracting to find out where it goes True-False does not take into account that it can start true -> false
+            changePoints = np.insert(changePoints, 0, 0)
         return changePoints
 
-    def filterDataForDistance(self,df,distance_threshold=0.5):
+    def filterDataForDistance(self, df, distance_threshold=0.5):
         """
         filter to just the points around when the distance is small
         and return a list of seperate dataframes for each group of points
         """
-        changePoints = self.getChangePoints(df,distance_threshold=distance_threshold)
+        changePoints = self.getChangePoints(df, distance_threshold=distance_threshold)
         listOfDF = []
         for i in range(0, len(changePoints), 2):
             start_index = changePoints[i]
             end_index = changePoints[i + 1]
-            listOfDF.append(df.iloc[start_index:end_index-1])
+            listOfDF.append(df.iloc[start_index : end_index - 1])
 
         return listOfDF
-

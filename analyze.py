@@ -47,7 +47,6 @@ for stop in stopList:
 
 
 def graph(df):
-
     plt.figure(figsize=(30, 10))
     plt.scatter(df["timestamp"], df["distance"], marker="o", linestyle="-", color="r")
 
@@ -79,7 +78,7 @@ def cleanDistance(df):
     return filtered_df
 
 
-conn = sqlite3.connect("newBusTracking.db")
+conn = sqlite3.connect("data/newBusTracking.db")
 cursor = conn.cursor()
 vehicleSQL = "select vehicle_id from vehicles"
 cursor.execute(vehicleSQL)
