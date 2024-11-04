@@ -38,27 +38,38 @@ group = df.groupby(["vehicle_id", "destination"])[
 
 vehicle_id = "24006"
 direction_tuple = ("University Hospital", "Poplar Grove (Orange St)")
-_, vehicle_direction = direction_tuple
+vehicle_direction,_ = direction_tuple
 changePoints = None
 for groupTuple, series in group:
     id, destination = groupTuple
-    if (id == vehicle_id) & (destination == vehicle_direction):
-        print(f"{id} : {destination}")
-        series.reset_index(inplace=True)
-        changePoints = series.loc[series["border"]]
-        print(changePoints)
-        assert len(changePoints) % 2 == 0
-        for i in range(0,len(changePoints),2):
-            #i is where it is inside
-            #i+1 is where it is just outside
-            #any index between those two things should be inside no include i+1
-            start = changePoints.iloc[i].name
-            stop = changePoints.iloc[i+1].name
-            series.loc[start:stop-1,'border'] = True
-            series.loc[stop,'border'] = False
-            print(series.loc[start:stop])
+    print(f"{id} : {destination}")
+    series.reset_index(inplace=True)
+    changePoints = series.loc[series["border"]]
+    print(changePoints)
+    print(series.loc[0:20])
+    if len(changePoints) % 2 != 0:
+        #either starts or ends inside the circle
+        if series.loc[0,'distance'] < radius:
+            print("starts inside")
+            series.loc[0,'border'] = True
+            changePoints = series.loc[series["border"]]
+        if series.loc[series.index[-1],'distance'] < radius:
+            print("ends inside")
+            series.loc[series.index[-1],'border'] = True
+            changePoints = series.loc[series["border"]]
+        pass
+    assert len(changePoints) % 2 == 0
+    for i in range(0,len(changePoints),2):
+        #i is where it is inside
+        #i+1 is where it is just outside
+        #any index between those two things should be inside no include i+1
+        start = changePoints.iloc[i].name
+        stop = changePoints.iloc[i+1].name
+        series.loc[start:stop-1,'border'] = True
+        series.loc[stop,'border'] = False
+        print(series.loc[start:stop])
 
-        changePoints = series.loc[series["border"]]['index']
+    changePoints = series.loc[series["border"]]['index']
 
 circle = Circle((x, y), radius=radius, color="red", fill=False)
 
