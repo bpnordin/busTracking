@@ -74,12 +74,14 @@ direction_tuple = ("University Hospital", "Poplar Grove (Orange St)")
 vehicle_direction,_ = direction_tuple
 circle = Circle((x, y), radius=radius, color="red", fill=False)
 
+mask = (df['destination'] == vehicle_direction) & (df['vehicle_id'] == vehicle_id)
+mask_inside = mask & df['inside']
 plt.plot(
-    df.loc[df["vehicle_id"] == vehicle_id]["longitude"],
-    df.loc[df["vehicle_id"] == vehicle_id]["latitude"],
+    df.loc[mask]["longitude"],
+    df.loc[mask]["latitude"],
 )
 plt.scatter(
-    df.loc[df["inside"]]["longitude"], df.loc[df["inside"]]["latitude"], color="red"
+    df.loc[mask_inside]["longitude"], df.loc[mask_inside]["latitude"], color="red"
 )
 plt.gca().add_patch(circle)
 plt.show()
