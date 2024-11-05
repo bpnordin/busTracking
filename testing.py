@@ -71,7 +71,7 @@ group = df.groupby(["vehicle_id", "destination"])[
 
 vehicle_id = "24002"
 direction_tuple = ("University Hospital", "Poplar Grove (Orange St)")
-vehicle_direction,_ = direction_tuple
+_, vehicle_direction= direction_tuple
 circle = Circle((x, y), radius=radius, color="red", fill=False)
 
 mask = (df['destination'] == vehicle_direction) & (df['vehicle_id'] == vehicle_id)

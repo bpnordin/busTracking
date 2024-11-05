@@ -173,7 +173,7 @@ class BusData:
         )
         return df_copy
 
-    def getInsidePoints(self, df, distance_threshold=0.5):
+    def getInsidePoints(self, df, distance_threshold=0.005):
         """
         filter to just the points around when the distance is small
         """
