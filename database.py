@@ -173,32 +173,49 @@ class BusData:
         )
         return df_copy
 
-    def getChangePoints(self, df, distance_threshold=0.5):
+    def getInsidePoints(self, df, distance_threshold=0.5):
         """
         filter to just the points around when the distance is small
         """
-        mask_distance = df["distance"] < distance_threshold
-        changePoints = np.where(
-            (mask_distance - mask_distance.shift()).infer_objects().fillna(0) != 0
-        )[0]
-        print(changePoints)
-        print(len(changePoints))
-        print(mask_distance[0])
-        if mask_distance[0] == True:
-            # subtracting to find out where it goes True-False does not take into account that it can start true -> false
-            changePoints = np.insert(changePoints, 0, 0)
-        return changePoints
+        def get_inside_points(series):
+            b1 = series < distance_threshold
+            b2 = series.shift() < distance_threshold
+            if b1.iloc[0]:
+                b2.iloc[0] = True
+            else:
+                b2.iloc[0] = False
 
-    def filterDataForDistance(self, df, distance_threshold=0.5):
-        """
-        filter to just the points around when the distance is small
-        and return a list of seperate dataframes for each group of points
-        """
-        changePoints = self.getChangePoints(df, distance_threshold=distance_threshold)
-        listOfDF = []
-        for i in range(0, len(changePoints), 2):
-            start_index = changePoints[i]
-            end_index = changePoints[i + 1]
-            listOfDF.append(df.iloc[start_index : end_index - 1])
+            border = b1 ^ b2
+            df_border = border.reset_index(drop=False)
+            df_border.columns = ["index","inside"]
+            start = series.iloc[0] < distance_threshold
+            end = series.loc[series.index[-1]] < distance_threshold
+            if start:
+                #make the start a change point
+                border.iloc[0] = True
+            if end:
+                #make the end a change point
+                border.loc[border.index[-1]] = True
 
-        return listOfDF
+            #time to turn the series into a flat dataframe
+            df_fromSeries = series.reset_index(drop=False)
+            df_fromSeries.columns = ['index', 'distance']
+            changePoints = df_fromSeries[border.reset_index(drop=True)]
+
+            assert len(changePoints) % 2 == 0
+            for i in range(0,len(changePoints),2):
+                #i is where it is inside
+                #i+1 is where it is just outside
+                #any index between those two things should be inside no include i+1
+                start = changePoints.iloc[i].name
+                stop = changePoints.iloc[i+1].name
+                df_border.loc[start:stop-1,'inside'] = True
+                df_border.loc[stop,'inside'] = False
+
+            df_border = df_border.set_index('index')
+            return df_border['inside']
+
+
+        df["inside"] = df.groupby(["vehicle_id", "destination"])["distance"].transform(get_inside_points)
+        return df
+

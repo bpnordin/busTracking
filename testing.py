@@ -20,7 +20,7 @@ df.sort_values("timestamp", inplace=True)
 # df = df.loc[df["distance"].diff() != 0].copy()
 
 
-def change(series):
+def get_inside_points(series):
     b1 = series < radius
     b2 = series.shift() < radius
     if b1.iloc[0]:
@@ -62,7 +62,7 @@ def change(series):
     return df_border['inside']
 
 
-df["inside"] = df.groupby(["vehicle_id", "destination"])["distance"].transform(change)
+df["inside"] = df.groupby(["vehicle_id", "destination"])["distance"].transform(get_inside_points)
 print(df)
 
 group = df.groupby(["vehicle_id", "destination"])[
