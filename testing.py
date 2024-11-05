@@ -1,3 +1,4 @@
+from operator import length_hint
 from database import BusData
 import matplotlib.pyplot as plt
 from matplotlib.patches import Circle
@@ -27,37 +28,24 @@ def change(series):
     else:
         b2.iloc[0] = False
 
-    return b1 ^ b2
+    border = b1 ^ b2
+    df_border = border.reset_index(drop=False)
+    df_border.columns = ["index","inside"]
+    start = series.iloc[0] < radius
+    end = series.loc[series.index[-1]] < radius
+    if start:
+        #make the start a change point
+        border.iloc[0] = True
+    if end:
+        #make the end a change point
+        border.loc[border.index[-1]] = True
 
+    #time to turn the series into a flat dataframe
+    df = series.reset_index(drop=False)
+    df.columns = ['index', 'distance']
+    changePoints = df[border.reset_index(drop=True)]
+    print(df_border)
 
-df["border"] = df.groupby(["vehicle_id", "destination"])["distance"].transform(change)
-
-group = df.groupby(["vehicle_id", "destination"])[
-    ["distance", "border", "latitude", "longitude"]
-]
-
-vehicle_id = "24006"
-direction_tuple = ("University Hospital", "Poplar Grove (Orange St)")
-vehicle_direction,_ = direction_tuple
-changePoints = None
-for groupTuple, series in group:
-    id, destination = groupTuple
-    print(f"{id} : {destination}")
-    series.reset_index(inplace=True)
-    changePoints = series.loc[series["border"]]
-    print(changePoints)
-    print(series.loc[0:20])
-    if len(changePoints) % 2 != 0:
-        #either starts or ends inside the circle
-        if series.loc[0,'distance'] < radius:
-            print("starts inside")
-            series.loc[0,'border'] = True
-            changePoints = series.loc[series["border"]]
-        if series.loc[series.index[-1],'distance'] < radius:
-            print("ends inside")
-            series.loc[series.index[-1],'border'] = True
-            changePoints = series.loc[series["border"]]
-        pass
     assert len(changePoints) % 2 == 0
     for i in range(0,len(changePoints),2):
         #i is where it is inside
@@ -65,12 +53,25 @@ for groupTuple, series in group:
         #any index between those two things should be inside no include i+1
         start = changePoints.iloc[i].name
         stop = changePoints.iloc[i+1].name
-        series.loc[start:stop-1,'border'] = True
-        series.loc[stop,'border'] = False
-        print(series.loc[start:stop])
+        print(start)
+        print(stop)
+        df_border.loc[start:stop-1,'inside'] = True
+        df_border.loc[stop,'inside'] = False
 
-    changePoints = series.loc[series["border"]]['index']
+    df_border = df_border.set_index('index')
+    return df_border['inside']
 
+
+df["inside"] = df.groupby(["vehicle_id", "destination"])["distance"].transform(change)
+print(df)
+
+group = df.groupby(["vehicle_id", "destination"])[
+    ["distance", "inside", "latitude", "longitude","timestamp"]
+]
+
+vehicle_id = "24002"
+direction_tuple = ("University Hospital", "Poplar Grove (Orange St)")
+vehicle_direction,_ = direction_tuple
 circle = Circle((x, y), radius=radius, color="red", fill=False)
 
 plt.plot(
@@ -78,7 +79,7 @@ plt.plot(
     df.loc[df["vehicle_id"] == vehicle_id]["latitude"],
 )
 plt.scatter(
-    df.loc[changePoints]["longitude"], df.loc[changePoints]["latitude"], color="red"
+    df.loc[df["inside"]]["longitude"], df.loc[df["inside"]]["latitude"], color="red"
 )
 plt.gca().add_patch(circle)
 plt.show()
