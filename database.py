@@ -136,6 +136,7 @@ class BusData:
             columns=["latitude", "longitude", "timestamp", "destination", "vehicle_id"],
         )
         df["timestamp"] = pd.to_datetime(df["timestamp"])
+        df.sort_values("timestamp", inplace=True)
         return df
 
     def calculateDistance(self, df, stop_coords=("40.769267", "-111.882791")):
