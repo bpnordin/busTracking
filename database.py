@@ -122,6 +122,7 @@ class BusData:
             locationList, columns=["latitude", "longitude", "timestamp", "destination"]
         )
         df["timestamp"] = pd.to_datetime(df["timestamp"])
+        df.sort_values("timestamp", inplace=True)
         return df
 
     def getRouteLocationData(self, routeNum):
