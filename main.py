@@ -1,6 +1,6 @@
 from bokeh.plotting import figure, show, curdoc
 from database import BusData
-from bokeh.models import ColumnDataSource, RangeTool, Select, Circle, Plot
+from bokeh.models import ColumnDataSource, RangeTool, Select, Circle, Plot, Slider
 from bokeh.layouts import column
 import numpy as np
 
@@ -25,6 +25,7 @@ df = db.calculateDistance(df)
 df = db.getInsidePoints(df)
 df = db.getTrip(df)
 
+
 selectVehicles = df["vehicle_id"].unique().tolist()
 selectVehicleWidget = Select(
     title="Select a vehicle id", options=selectVehicles, value=selectVehicles[0]
@@ -39,20 +40,17 @@ mask = (df["destination"] == selectDirectionWidget.value) & (
     df["vehicle_id"] == selectVehicleWidget.value
 )
 df_default = df[mask]
-
-selectTrip = df_default['tripID'].unique().tolist()
-selectTripWidget = Select(title="select a tripID", options=selectTrip, value="1")
+maxTrip = df_default['tripID'].max()
+tripSlider = Slider(value=1,start=1,end=maxTrip,step=1)
 
 def update_id(attr, old, new):
     tripMask = (df["destination"] == selectDirectionWidget.value) & (
         df["vehicle_id"] == selectVehicleWidget.value
     )
-    selectTripWidget.update(options=df[tripMask]['tripID'].unique().tolist())
-    print(selectVehicleWidget.value)
-    print(df[df['vehicle_id'] == selectVehicleWidget.value])
+    tripSlider.update(end=df[tripMask]['tripID'].max(),value=1,start=1)
     mask = (df["destination"] == selectDirectionWidget.value) & (
         df["vehicle_id"] == selectVehicleWidget.value
-    ) & (df['tripID'] == selectTripWidget.value)
+    ) & (df['tripID'] == tripSlider.value)
     source.data = df.loc[mask].sort_values("timestamp")
     source_inside.data = df.loc[mask & df["inside"]].sort_values("timestamp")
 
@@ -61,31 +59,31 @@ def update_destination(att, old, new):
     tripMask = (df["destination"] == selectDirectionWidget.value) & (
         df["vehicle_id"] == selectVehicleWidget.value
     )
-    selectTripWidget.update(options=df[tripMask]['tripID'].unique().tolist())
+    tripSlider.update(end=df[tripMask]['tripID'].max(),value=1,start=1)
     mask = (df["destination"] == selectDirectionWidget.value) & (
         df["vehicle_id"] == selectVehicleWidget.value
-    ) & (df['tripID'] == selectTripWidget.value)
+    ) & (df['tripID'] == tripSlider.value)
     source.data = df.loc[mask].sort_values("timestamp")
     source_inside.data = df.loc[mask & df["inside"]].sort_values("timestamp")
 
 def update_trip(att,old,new):
     mask = (df["destination"] == selectDirectionWidget.value) & (
         df["vehicle_id"] == selectVehicleWidget.value
-    ) & (df['tripID'] == selectTripWidget.value)
+    ) & (df['tripID'] == tripSlider.value)
     source.data = df.loc[mask].sort_values("timestamp")
     source_inside.data = df.loc[mask & df["inside"]].sort_values("timestamp")
 
 
 mask = (df["destination"] == selectDirectionWidget.value) & (
     df["vehicle_id"] == selectVehicleWidget.value
-) & (df['tripID'] == selectTripWidget.value)
+) & (df['tripID'] == tripSlider.value)
 
 df_default = df[mask]
 source = ColumnDataSource(df_default)
 source_inside = ColumnDataSource(df_default[df_default["inside"]])
 selectVehicleWidget.on_change("value", update_id)
 selectDirectionWidget.on_change("value", update_destination)
-selectTripWidget.on_change("value",update_trip)
+tripSlider.on_change("value",update_trip)
 
 
 stop_coords = (40.769267, -111.882791)
@@ -100,6 +98,6 @@ p = figure(match_aspect=True)
 p.line("longitude", "latitude", source=source, color="blue")
 p.scatter("longitude", "latitude", source=source_inside, color="red")
 p.add_glyph(stopData, glyph)
-layout = column(p, selectVehicleWidget, selectDirectionWidget,selectTripWidget)
+layout = column(p, selectVehicleWidget, selectDirectionWidget,tripSlider)
 curdoc().add_root(layout)
 show(layout)
