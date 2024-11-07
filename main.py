@@ -23,6 +23,7 @@ routeNum = "1"
 df = db.getRouteLocationData(routeNum)
 df = db.calculateDistance(df)
 df = db.getInsidePoints(df)
+df = db.getTrip(df)
 
 selectVehicles = df["vehicle_id"].unique().tolist()
 selectVehicleWidget = Select(
@@ -34,31 +35,57 @@ selectDirectionWidget = Select(
     title="Select a destination", options=selectDirection, value=selectDirection[0]
 )
 
+mask = (df["destination"] == selectDirectionWidget.value) & (
+    df["vehicle_id"] == selectVehicleWidget.value
+)
+df_default = df[mask]
+
+selectTrip = df_default['tripID'].unique().tolist()
+selectTripWidget = Select(title="select a tripID", options=selectTrip, value="1")
 
 def update_id(attr, old, new):
-    mask = (df["destination"] == selectDirectionWidget.value) & (
+    tripMask = (df["destination"] == selectDirectionWidget.value) & (
         df["vehicle_id"] == selectVehicleWidget.value
     )
+    selectTripWidget.update(options=df[tripMask]['tripID'].unique().tolist())
+    print(selectVehicleWidget.value)
+    print(df[df['vehicle_id'] == selectVehicleWidget.value])
+    mask = (df["destination"] == selectDirectionWidget.value) & (
+        df["vehicle_id"] == selectVehicleWidget.value
+    ) & (df['tripID'] == selectTripWidget.value)
     source.data = df.loc[mask].sort_values("timestamp")
     source_inside.data = df.loc[mask & df["inside"]].sort_values("timestamp")
 
 
 def update_destination(att, old, new):
-    mask = (df["destination"] == selectDirectionWidget.value) & (
+    tripMask = (df["destination"] == selectDirectionWidget.value) & (
         df["vehicle_id"] == selectVehicleWidget.value
     )
+    selectTripWidget.update(options=df[tripMask]['tripID'].unique().tolist())
+    mask = (df["destination"] == selectDirectionWidget.value) & (
+        df["vehicle_id"] == selectVehicleWidget.value
+    ) & (df['tripID'] == selectTripWidget.value)
+    source.data = df.loc[mask].sort_values("timestamp")
+    source_inside.data = df.loc[mask & df["inside"]].sort_values("timestamp")
+
+def update_trip(att,old,new):
+    mask = (df["destination"] == selectDirectionWidget.value) & (
+        df["vehicle_id"] == selectVehicleWidget.value
+    ) & (df['tripID'] == selectTripWidget.value)
     source.data = df.loc[mask].sort_values("timestamp")
     source_inside.data = df.loc[mask & df["inside"]].sort_values("timestamp")
 
 
 mask = (df["destination"] == selectDirectionWidget.value) & (
     df["vehicle_id"] == selectVehicleWidget.value
-)
+) & (df['tripID'] == selectTripWidget.value)
+
 df_default = df[mask]
 source = ColumnDataSource(df_default)
 source_inside = ColumnDataSource(df_default[df_default["inside"]])
 selectVehicleWidget.on_change("value", update_id)
 selectDirectionWidget.on_change("value", update_destination)
+selectTripWidget.on_change("value",update_trip)
 
 
 stop_coords = (40.769267, -111.882791)
@@ -70,9 +97,9 @@ glyph = Circle(
 )
 
 p = figure(match_aspect=True)
-p.scatter("longitude", "latitude", source=source, color="blue")
+p.line("longitude", "latitude", source=source, color="blue")
 p.scatter("longitude", "latitude", source=source_inside, color="red")
 p.add_glyph(stopData, glyph)
-layout = column(p, selectVehicleWidget, selectDirectionWidget)
+layout = column(p, selectVehicleWidget, selectDirectionWidget,selectTripWidget)
 curdoc().add_root(layout)
 show(layout)

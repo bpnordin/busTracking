@@ -229,7 +229,7 @@ class BusData:
             dataframe.columns = ["index", "timestamp"]
 
             # should be no 0 values after we are done with this
-            dataframe["tripID"] = 0
+            dataframe["tripID"] = "0"
             time_diff = dataframe["timestamp"].diff().dt.total_seconds() / 300
             time_diff = time_diff.fillna(0)
             mask = time_diff > 1
@@ -237,21 +237,21 @@ class BusData:
             changePoints = dataframe[mask]
             if len(changePoints) == 0:
                 dataframe = dataframe.set_index("index")
-                dataframe["tripID"] = 1
+                dataframe["tripID"] = "1"
                 return dataframe["tripID"]
 
             startIndex = 0
             tripID = 1
             for endIndex, _ in changePoints.iterrows():
-                dataframe.loc[startIndex:endIndex, "tripID"] = tripID
+                dataframe.loc[startIndex:endIndex, "tripID"] = str(tripID)
                 tripID += 1
                 startIndex = endIndex
 
             # have to go to the end
-            dataframe.loc[startIndex:, "tripID"] = tripID
+            dataframe.loc[startIndex:, "tripID"] = str(tripID)
 
             dataframe = dataframe.set_index("index")
-            assert len(dataframe[dataframe["tripID"] == 0]) == 0
+            assert len(dataframe[dataframe["tripID"] == "0"]) == 0
             return dataframe["tripID"]
 
         """
