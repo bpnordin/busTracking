@@ -23,13 +23,12 @@ routeNum = "1"
 df = db.getRouteLocationData(routeNum)
 df = db.calculateDistance(df)
 df = db.getInsidePoints(df)
-print(df[df['inside']])
 
 selectVehicles = df["vehicle_id"].unique().tolist()
-selectVehicleWidget = Select(title="Select a vehicle id", options=selectVehicles)
+selectVehicleWidget = Select(title="Select a vehicle id", options=selectVehicles, value=selectVehicles[0])
 
 selectDirection = df["destination"].unique().tolist()
-selectDirectionWidget = Select(title="Select a destination", options=selectDirection)
+selectDirectionWidget = Select(title="Select a destination", options=selectDirection, value=selectDirection[0])
 
 
 def update_id(attr, old, new):
@@ -44,10 +43,10 @@ def update_destination(att, old, new):
     source_inside.data = df.loc[mask & df['inside']].sort_values("timestamp")
 
 
-df_vehicle = df.loc[df["vehicle_id"] == "13004"].sort_values("timestamp")
-print(df_vehicle)
-source = ColumnDataSource(df_vehicle)
-source_inside = ColumnDataSource(df_vehicle[df_vehicle['inside']])
+mask = (df["destination"] == selectDirectionWidget.value) & (df["vehicle_id"] == selectVehicleWidget.value)
+df_default = df[mask]
+source = ColumnDataSource(df_default)
+source_inside = ColumnDataSource(df_default[df_default['inside']])
 selectVehicleWidget.on_change("value", update_id)
 selectDirectionWidget.on_change("value", update_destination)
 
