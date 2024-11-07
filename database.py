@@ -179,6 +179,7 @@ class BusData:
         """
         filter to just the points around when the distance is small
         """
+
         def get_inside_points(series):
             b1 = series < distance_threshold
             b2 = series.shift() < distance_threshold
@@ -189,35 +190,84 @@ class BusData:
 
             border = b1 ^ b2
             df_border = border.reset_index(drop=False)
-            df_border.columns = ["index","inside"]
+            df_border.columns = ["index", "inside"]
             start = series.iloc[0] < distance_threshold
             end = series.loc[series.index[-1]] < distance_threshold
             if start:
-                #make the start a change point
+                # make the start a change point
                 border.iloc[0] = True
             if end:
-                #make the end a change point
+                # make the end a change point
                 border.loc[border.index[-1]] = True
 
-            #time to turn the series into a flat dataframe
+            # time to turn the series into a flat dataframe
             df_fromSeries = series.reset_index(drop=False)
-            df_fromSeries.columns = ['index', 'distance']
+            df_fromSeries.columns = ["index", "distance"]
             changePoints = df_fromSeries[border.reset_index(drop=True)]
 
             assert len(changePoints) % 2 == 0
-            for i in range(0,len(changePoints),2):
-                #i is where it is inside
-                #i+1 is where it is just outside
-                #any index between those two things should be inside no include i+1
+            for i in range(0, len(changePoints), 2):
+                # i is where it is inside
+                # i+1 is where it is just outside
+                # any index between those two things should be inside no include i+1
                 start = changePoints.iloc[i].name
-                stop = changePoints.iloc[i+1].name
-                df_border.loc[start:stop-1,'inside'] = True
-                df_border.loc[stop,'inside'] = False
+                stop = changePoints.iloc[i + 1].name
+                df_border.loc[start : stop - 1, "inside"] = True
+                df_border.loc[stop, "inside"] = False
 
-            df_border = df_border.set_index('index')
-            return df_border['inside']
+            df_border = df_border.set_index("index")
+            return df_border["inside"]
 
-
-        df["inside"] = df.groupby(["vehicle_id", "destination"])["distance"].transform(get_inside_points)
+        df["inside"] = df.groupby(["vehicle_id", "destination"])["distance"].transform(
+            get_inside_points
+        )
         return df
 
+    def getTrip(self, df):
+        def getTrip(series):
+            dataframe = series.reset_index()
+            dataframe.columns = ["index", "timestamp"]
+
+            # should be no 0 values after we are done with this
+            dataframe["tripID"] = 0
+            time_diff = dataframe["timestamp"].diff().dt.total_seconds() / 300
+            time_diff = time_diff.fillna(0)
+            mask = time_diff > 1
+
+            changePoints = dataframe[mask]
+            if len(changePoints) == 0:
+                dataframe = dataframe.set_index("index")
+                dataframe["tripID"] = 1
+                return dataframe["tripID"]
+
+            startIndex = 0
+            tripID = 1
+            for endIndex, _ in changePoints.iterrows():
+                dataframe.loc[startIndex:endIndex, "tripID"] = tripID
+                tripID += 1
+                startIndex = endIndex
+
+            # have to go to the end
+            dataframe.loc[startIndex:, "tripID"] = tripID
+
+            dataframe = dataframe.set_index("index")
+            assert len(dataframe[dataframe["tripID"] == 0]) == 0
+            return dataframe["tripID"]
+
+        """
+        df['time_diff'] = df['timestamp'].diff().dt.total_seconds() / 60
+        gap_indices = df[df['time_diff'] > 1].index
+        split_dfs = []
+        start_idx = 0
+        for end_idx in gap_indices:
+            #iloc is not inclusive, and end_idx is the place where the timestsamp is > 60
+            split_dfs.append(df.iloc[start_idx:end_idx].copy())
+            start_idx = end_idx 
+
+        split_dfs.append(df.iloc[start_idx:].copy())
+        """
+
+        df["tripID"] = df.groupby(["vehicle_id", "destination"])["timestamp"].transform(
+            getTrip
+        )
+        return df
